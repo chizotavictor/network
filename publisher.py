@@ -27,7 +27,7 @@ props = pika.BasicProperties(
 channel.basic_publish(
     exchange = '',
     routing_key = 'Rasp_1',
-    body = "{'temp': 12, 'pressure': 10, 'level':30}",
+    body = '{"temp": 22, "pressure": 10, "level": 100 }',
     properties = props)
 
 connection.close()

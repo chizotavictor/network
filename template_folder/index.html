@@ -4,6 +4,13 @@
   </head>
   <body>
     <h1>Testing MQTT & Flask-SocketIO</h1>
+
+    <br>
+    <center><h1 id="temp" style="font-size: 100px;color: red">0 Celsius</h1></center>
+    <br>
+    <center><h1 id="pressure" style="font-size: 100px;color: red">0 bar</h1></center>
+    <br>
+    <center><h1 id="litre" style="font-size: 100px;color: red">0 litre</h1></center>
     <script
       type="text/javascript"
       src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.min.js"
@@ -12,24 +19,16 @@
 
     <script type="text/javascript">
       $(document).ready(function () {
-        var socket = io.connect("http://127.0.0.1:5000/", {secure:false});
+        var socket = io.connect("http://192.168.1.193:5000/device", {secure:false});
 
-        var numbers_received = [];
-
-        //receive details from server
-        socket.on('newnumber', function(msg) {
-          console.log("Received number" + msg.number);
-          //maintain a list of ten numbers
-          if (numbers_received.length >= 10){
-              numbers_received.shift()
-          }            
-          console.log(msg.number);
-          numbers_received.push(msg.number);
-          numbers_string = '';
-          for (var i = 0; i < numbers_received.length; i++){
-              numbers_string = numbers_string + '<p>' + numbers_received[i].toString() + '</p>';
-          }
-          $('#log').html(numbers_string);
+        // receive details from server
+        socket.on('device_process_value', function(msg) {
+          var result = msg.data;
+               
+          obj = JSON.parse(result)
+          $('#temp').html( obj.temp + ' celsius');
+          $('#pressure').html( obj.pressure + ' bar');
+          $('#litre').html( obj.level + ' litre');
         });
 
         /*
