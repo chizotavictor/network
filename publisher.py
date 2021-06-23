@@ -2,10 +2,10 @@
 
 import pika
 
-node = 'localhost'
+node = '192.168.1.193'
 port = 5672
-username = "guest"
-password = "guest"
+username = "meche"
+password = "meche"
 
 # Connect to a remote AMQP server with a username/password
 credentials = pika.PlainCredentials(username, password)

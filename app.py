@@ -4,6 +4,10 @@ from flask_socketio import SocketIO, emit, disconnect, send
 import pika
 from flask_cors import CORS
 
+from random import random
+from time import sleep
+from threading import Thread, Event
+
 app = Flask(__name__, template_folder='template_folder')
 app.config['SECRET_KEY'] = 'tellmewhoyouare!@$%'
 app.config['DEBUG'] = True
@@ -12,21 +16,66 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 socketio = SocketIO(app, cors_allowed_origins='*')
 
+#Random Number Generator Thread
+
+thread = Thread()
+thread_stop_event = Event()
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
-@socketio.on('message')
-def handleMessage(msg):
-	print('Message: ' + msg)
-	send(msg, broadcast=True)
+def randomNumberGenerator():
+    """
+    Generate a random number every 1 second and emit to a socketio instance (broadcast)
+    Ideally to be run in a separate thread?
+    """
+    #infinite loop of magical random numbers
+    print("Making random numbers")
+    while not thread_stop_event.isSet():
+        number = round(random()*10, 3)
+        print(number)
+        socketio.emit('newnumber', {'number': number}, namespace='/test')
+        socketio.sleep(5)
 
-# def rabbit_callback(ch, method, properties, body):
-#     socketio.emit('connect', {'data': 'yes'})
-#     print("body: ", body)
+@socketio.on('connect', namespace='/test')
+def test_connect():
+    # need visibility of the global thread object
+    global thread
+    print('Client connected')
 
-# @socketio.on("connect")
-# def connect():
+    #Start the random number generator thread only if the thread has not been started before.
+    if not thread.isAlive():
+        print("Starting Thread")
+        thread = socketio.start_background_task(randomNumberGenerator)
+
+def rabbit_callback(ch, method, properties, body):
+    # socketio.emit('connect', {'data': 'yes'})
+    print("body: ", body)
+
+class RandomThread(Thread):
+    def __init__(self):
+        self.delay = 1
+        super(RandomThread, self).__init__()
+
+    def randomNumberGenerator(self):
+        """
+        Generate a random number every 1 second and emit to a socketio instance (broadcast)
+        Ideally to be run in a separate thread?
+        """
+        #infinite loop of magical random numbers
+        print("Making random numbers")
+        while not thread_stop_event.isSet():
+            number = round(random()*10, 3)
+            print(number)
+            socketio.emit('newnumber', {'number': number}, namespace='/test')
+            sleep(self.delay)
+
+    def run(self):
+        self.randomNumberGenerator()
+        
+# @socketio.on("consumer")
+# def consumer():
 #     creds = pika.PlainCredentials(
 #         username="guest",
 #         password="guest")
@@ -40,14 +89,8 @@ def handleMessage(msg):
 
 #     # This is one channel inside the connection
 #     channel = connection.channel()
-
-#     # Declare the exchange we're going to use
-#     exchange_name = ''
-#     channel.exchange_declare(exchange=exchange_name, type='topic')
-#     channel.queue_declare(queue='Rasp_1')
-#     channel.queue_bind(exchange='', queue='Rasp_1', routing_key='Rasp_1')
-
-#     channel.basic_consume(rabbit_callback, queue='Rasp_1', no_ack=True)
+#     channel.basic_qos(prefetch_count=1)
+#     channel.basic_consume(queue='Rasp_1', on_message_callback=rabbit_callback)
 #     channel.start_consuming()
 
 if __name__ == '__main__':
